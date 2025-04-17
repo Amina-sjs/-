@@ -42,7 +42,7 @@ public class Main {
 
     private static void runUserSession(Scanner scanner, String currentUser) {
         HealthTrackerService service = new HealthTrackerService(currentUser);
-
+    
         while (true) {
             System.out.println("\n=== Health Parameter Tracker ===");
             System.out.println("1. Add Record");
@@ -54,9 +54,14 @@ public class Main {
             System.out.println("7. Mark Daily Training Done");
             System.out.println("8. Show My Statistics");
             System.out.println("9. Logout");
+    
+            if (currentUser.equals("admin")) {
+                System.out.println("10. Generate System Report");
+            }
+    
             System.out.print("Choose an option: ");
             String choice = scanner.nextLine();
-
+    
             switch (choice) {
                 case "1" -> service.addRecord(scanner);
                 case "2" -> service.viewRecords();
@@ -68,10 +73,18 @@ public class Main {
                 case "8" -> service.showStatistics();
                 case "9" -> {
                     System.out.println("Logged out.");
-                    return; 
+                    return;
+                }
+                case "10" -> {
+                    if (currentUser.equals("admin")) {
+                        service.generateReports(); // 💥 Вызов метода генерации отчёта
+                    } else {
+                        System.out.println("Access denied.");
+                    }
                 }
                 default -> System.out.println("Invalid option.");
             }
         }
     }
+    
 }

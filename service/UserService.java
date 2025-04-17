@@ -56,4 +56,54 @@ public class UserService {
     public boolean userExists(String name) {
         return users.containsKey(name);
     }
+
+    public void run(Scanner scanner, String currentUser) {
+        HealthTrackerService tracker = new HealthTrackerService(currentUser);
+    
+        while (true) {
+            System.out.println("\n=== Health Parameter Tracker ===");
+            System.out.println("1. Add Record");
+            System.out.println("2. View My Records");
+            System.out.println("3. Update My Record");
+            System.out.println("4. Delete My Record (admin only)");
+            System.out.println("5. Export My Data");
+            System.out.println("6. Set Goal & Training Plan");
+            System.out.println("7. Mark Daily Training Done");
+            System.out.println("8. Show My Statistics");
+            System.out.println("9. Logout");
+    
+            // 💡 Пункт 10 только для админа
+            if (currentUser.equals("admin")) {
+                System.out.println("10. Generate System Report");
+            }
+    
+            System.out.print("Choose an option: ");
+            String choice = scanner.nextLine();
+    
+            switch (choice) {
+                case "1": tracker.addRecord(scanner); break;
+                case "2": tracker.viewRecords(); break;
+                case "3": tracker.updateRecord(scanner); break;
+                case "4": tracker.deleteRecord(scanner); break;
+                case "5": tracker.exportData(); break;
+                case "6": tracker.setGoalAndSuggestWorkouts(scanner); break;
+                case "7": tracker.markWorkoutDone(scanner); break;
+                case "8": tracker.showStatistics(); break;
+                case "9":
+                    System.out.println("Logging out...");
+                    return;
+                case "10":
+                    if (currentUser.equals("admin")) {
+                        tracker.generateReports(); // 💥 вызываем метод генерации отчёта
+                    } else {
+                        System.out.println("Access denied.");
+                    }
+                    break;
+                default:
+                    System.out.println("Invalid choice.");
+            }
+        }
+    }
+    
+    
 }

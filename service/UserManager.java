@@ -3,8 +3,10 @@ package service;
 import java.io.*;
 import java.util.*;
 
+import util.ActivityLogger;
+
 public class UserManager {
-    private static final String USER_FILE = "users.csv";
+    private static final String USER_FILE = "data/users.csv";
     private final Map<String, String> users = new HashMap<>();
 
     public UserManager() {
@@ -32,12 +34,19 @@ public class UserManager {
     public boolean authenticate(String name, String password) {
         return users.containsKey(name) && users.get(name).equals(password);
     }
-
-    public void register(String name, String password) {
-        users.put(name, password);
-        saveUsers();
+public boolean register(String name, String password) {
+    if (users.containsKey(name)) {
+        System.out.println("User already exists.");
+        return false;
     }
+    users.put(name, password);
+    saveUsers();
 
+   
+    ActivityLogger.log(name, "register", "new user registered");
+
+    return true;
+}
     private void saveUsers() {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(USER_FILE))) {
             for (Map.Entry<String, String> entry : users.entrySet()) {

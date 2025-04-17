@@ -87,6 +87,8 @@ public class HealthTrackerService {
         records.add(record);
         csvHandler.saveRecords(records);
         System.out.println("Record added!");
+        logActivity(currentUser, "add_record");
+
     }
 
     public void viewRecords() {
@@ -130,6 +132,8 @@ public class HealthTrackerService {
         addRecord(scanner);
         csvHandler.saveRecords(records);
         System.out.println("Record updated.");
+        logActivity(currentUser, "update_record");
+
     }
 
     public void deleteRecord(Scanner scanner) {
@@ -149,6 +153,8 @@ public class HealthTrackerService {
         records.remove(index);
         csvHandler.saveRecords(records);
         System.out.println("Record deleted.");
+        System.out.println("Record deleted.");
+
     }
 
     public void showStatistics() {
@@ -192,6 +198,8 @@ public class HealthTrackerService {
             }
         }
         csvHandler.exportCSV("data/export_" + currentUser + ".csv", userRecords);
+        logActivity(currentUser, "export_data");
+
     }
 
     public void setGoalAndSuggestWorkouts(Scanner scanner) {
@@ -209,6 +217,8 @@ public class HealthTrackerService {
         selectedWorkout = scanner.nextLine();
         System.out.println("You chose: " + selectedWorkout + ". Good luck!");
         saveGoal();
+        logActivity(currentUser, "set_goal");
+
     }
 
     public void markWorkoutDone(Scanner scanner) {
@@ -230,6 +240,8 @@ public class HealthTrackerService {
         if (answer.equalsIgnoreCase("yes")) {
             dailyWorkoutLog.put(logKey, true);
             System.out.println("Great job! Workout marked as done for today.");
+            logActivity(currentUser, "workout_done");
+
         } else {
             System.out.println("No worries, try again tomorrow!");
         }
@@ -255,5 +267,55 @@ public class HealthTrackerService {
             }
         } catch (IOException ignored) {
         }
+ 
+   }
+
+   public void generateReports() {
+    if (!currentUser.equals("admin")) {
+        System.out.println("Access denied.");
+        return;
     }
+
+    int userCount = 0;
+    Map<String, Integer> operationCount = new HashMap<>();
+
+    try (BufferedReader userReader = new BufferedReader(new FileReader("data/users.csv"))) {
+        while (userReader.readLine() != null) {
+            userCount++;
+        }
+    } catch (IOException e) {
+        System.out.println("Failed to read users.");
+    }
+
+    try (BufferedReader logReader = new BufferedReader(new FileReader("data/activity_log.csv"))) {
+        String line;
+        logReader.readLine(); // пропустить заголовок
+        while ((line = logReader.readLine()) != null) {
+            String[] parts = line.split(",");
+            if (parts.length >= 3) {
+                String action = parts[2];
+                operationCount.put(action, operationCount.getOrDefault(action, 0) + 1);
+            }
+        }
+    } catch (IOException e) {
+        System.out.println("Failed to read activity log.");
+    }
+
+    System.out.println("=== System Report ===");
+    System.out.println("Total registered users: " + userCount);
+    System.out.println("Operation frequencies:");
+    for (String action : operationCount.keySet()) {
+        System.out.println("- " + action + ": " + operationCount.get(action));
+    }
+}
+private void logActivity(String user, String action) {
+    String date = LocalDate.now().toString();
+    try (PrintWriter writer = new PrintWriter(new FileWriter("data/activity_log.csv", true))) {
+        writer.println(date + "," + user + "," + action);
+    } catch (IOException e) {
+        System.out.println("Failed to write to activity log.");
+    }
+}
+
+
 }
