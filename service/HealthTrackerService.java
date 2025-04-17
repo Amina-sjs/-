@@ -19,11 +19,11 @@ public class HealthTrackerService {
     public HealthTrackerService(String currentUser) {
         this.currentUser = currentUser;
         this.records = csvHandler.loadRecords();
-        loadGoal(); // Загружаем цель при запуске
+        loadGoal(); 
     }
 
     public void run(Scanner scanner) {
-        loadGoal(); // загрузка цели при запуске
+        loadGoal(); 
         while (true) {
             System.out.println("\n=== Health Parameter Tracker ===");
             System.out.println("1. Add Record");
@@ -221,7 +221,7 @@ public class HealthTrackerService {
         String logKey = currentUser + "_" + today;
 
         if (dailyWorkoutLog.getOrDefault(logKey, false)) {
-            System.out.println("You've already marked today's workout as done ✅");
+            System.out.println("You've already marked today's workout as done ");
             return;
         }
 

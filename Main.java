@@ -68,7 +68,7 @@ public class Main {
                 case "8" -> service.showStatistics();
                 case "9" -> {
                     System.out.println("Logged out.");
-                    return; // Вернуться на экран входа
+                    return; 
                 }
                 default -> System.out.println("Invalid option.");
             }
