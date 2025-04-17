@@ -3,7 +3,7 @@ import java.util.*;
 public class ReportGenerator {
     public static void generateReport(List<Entry> entries) {
         if (entries.isEmpty()) {
-            System.out.println("Нет данных для отчета.");
+            System.out.println("No data available for the report.");
             return;
         }
 
@@ -21,9 +21,9 @@ public class ReportGenerator {
 
         String frequentExercise = Collections.max(exerciseStats.entrySet(), Map.Entry.comparingByValue()).getKey();
 
-        System.out.println("📊 Отчет:");
-        System.out.println("Средний вес: " + totalWeight / entries.size() + " кг");
-        System.out.println("Всего упражнений: " + exerciseCount);
-        System.out.println("Самое частое упражнение: " + frequentExercise);
+        System.out.println("📊 Report:");
+        System.out.println("Average weight: " + totalWeight / entries.size() + " kg");
+        System.out.println("Total exercises: " + exerciseCount);
+        System.out.println("Most frequent exercise: " + frequentExercise);
     }
 }

@@ -10,12 +10,12 @@ public class TrackerService {
     public void addEntry(String date, double weight, String bp, String exercise) {
         entries.add(new Entry(date, weight, bp, exercise));
         FileHandler.save(entries);
-        System.out.println("✅ Запись добавлена.");
+        System.out.println("✅ Entry added.");
     }
 
     public void showAll() {
         if (entries.isEmpty()) {
-            System.out.println("Нет записей.");
+            System.out.println("No entries available.");
             return;
         }
         entries.forEach(System.out::println);
@@ -24,25 +24,25 @@ public class TrackerService {
     public void update(String date, Scanner scanner) {
         for (Entry e : entries) {
             if (e.getDate().equals(date)) {
-                System.out.print("Новый вес: ");
+                System.out.print("New weight: ");
                 e.setWeight(scanner.nextDouble());
                 scanner.nextLine();
-                System.out.print("Новое давление: ");
+                System.out.print("New blood pressure: ");
                 e.setBloodPressure(scanner.nextLine());
-                System.out.print("Новое упражнение: ");
+                System.out.print("New exercise: ");
                 e.setExercise(scanner.nextLine());
                 FileHandler.save(entries);
-                System.out.println("✅ Запись обновлена.");
+                System.out.println("✅ Entry updated.");
                 return;
             }
         }
-        System.out.println("Запись не найдена.");
+        System.out.println("Entry not found.");
     }
 
     public void delete(String date) {
         entries.removeIf(e -> e.getDate().equals(date));
         FileHandler.save(entries);
-        System.out.println("✅ Запись удалена (если существовала).");
+        System.out.println("✅ Entry deleted (if it existed).");
     }
 
     public List<Entry> getEntries() {

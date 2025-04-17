@@ -9,7 +9,7 @@ public class FileHandler {
         try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(FILE_PATH))) {
             out.writeObject(entries);
         } catch (IOException e) {
-            System.out.println("Ошибка при сохранении данных: " + e.getMessage());
+            System.out.println("Error saving data: " + e.getMessage());
         }
     }
 
@@ -21,7 +21,7 @@ public class FileHandler {
         try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(FILE_PATH))) {
             return (List<Entry>) in.readObject();
         } catch (IOException | ClassNotFoundException e) {
-            System.out.println("Ошибка при загрузке данных: " + e.getMessage());
+            System.out.println("Error loading data: " + e.getMessage());
             return new ArrayList<>();
         }
     }

@@ -7,14 +7,14 @@ public class Menu {
     public void start() {
         while (true) {
             System.out.println("""
-                \n📋 Меню:
-                1. Добавить запись
-                2. Показать все записи
-                3. Обновить запись
-                4. Удалить запись
-                5. Сгенерировать отчет
-                6. Выход
-                Выберите опцию:
+                \n📋 Menu:
+                1. Add entry
+                2. Show all entries
+                3. Update entry
+                4. Delete entry
+                5. Generate report
+                6. Exit
+                Choose an option:
             """);
 
             String choice = scanner.nextLine();
@@ -22,31 +22,31 @@ public class Menu {
                 case "1" -> addEntry();
                 case "2" -> service.showAll();
                 case "3" -> {
-                    System.out.print("Введите дату записи: ");
+                    System.out.print("Enter the date of the entry: ");
                     service.update(scanner.nextLine(), scanner);
                 }
                 case "4" -> {
-                    System.out.print("Введите дату для удаления: ");
+                    System.out.print("Enter the date to delete: ");
                     service.delete(scanner.nextLine());
                 }
                 case "5" -> ReportGenerator.generateReport(service.getEntries());
                 case "6" -> {
-                    System.out.println("Выход...");
+                    System.out.println("Exiting...");
                     return;
                 }
-                default -> System.out.println("Неверный ввод.");
+                default -> System.out.println("Invalid input.");
             }
         }
     }
 
     private void addEntry() {
-        System.out.print("Дата (например, 2025-04-17): ");
+        System.out.print("Date (e.g., 2025-04-17): ");
         String date = scanner.nextLine();
-        System.out.print("Вес (в кг): ");
+        System.out.print("Weight (kg): ");
         double weight = scanner.nextDouble(); scanner.nextLine();
-        System.out.print("Давление (например, 120/80): ");
+        System.out.print("Blood pressure (e.g., 120/80): ");
         String bp = scanner.nextLine();
-        System.out.print("Упражнение: ");
+        System.out.print("Exercise: ");
         String exercise = scanner.nextLine();
         service.addEntry(date, weight, bp, exercise);
     }
