@@ -1,10 +1,12 @@
+import java.util.Locale;
 import java.util.Scanner;
 
 public class Menu {
     private TrackerService service = new TrackerService();
-    private Scanner scanner = new Scanner(System.in);
+    private Scanner scanner = new Scanner(System.in).useLocale(Locale.ENGLISH);
 
     public void start() {
+        
         while (true) {
             System.out.println("""
                 \n📋 Menu:
@@ -14,8 +16,9 @@ public class Menu {
                 4. Delete entry
                 5. Generate report
                 6. Exit
-                Choose an option:
-            """);
+                Choose an option:""");
+
+            
 
             String choice = scanner.nextLine();
             switch (choice) {
