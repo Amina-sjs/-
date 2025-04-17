@@ -42,5 +42,28 @@ public class HealthRecord {
         return "Name: " + name + ", Date: " + date + ", Weight: " + weight + "kg, BP: " + systolic + "/" + diastolic + ", Exercise: " + exercise;
     }
 
-    // + геттеры/сеттеры при необходимости
+    public String getName() {
+        return name;
+    }
+    
+    public String getDate() {
+        return date;
+    }
+    
+    public double getWeight() {
+        return weight;
+    }
+    
+    public int getSystolic() {
+        return systolic;
+    }
+    
+    public int getDiastolic() {
+        return diastolic;
+    }
+    
+    public String getExercise() {
+        return exercise;
+    }
+    
 }
