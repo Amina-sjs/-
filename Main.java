@@ -17,6 +17,8 @@ public class Main {
             System.out.println("5. Export Data");
             System.out.println("6. Exit");
             System.out.print("Choose an option: ");
+            System.out.println("7. Show Statistics");
+
 
             choice = Integer.parseInt(scanner.nextLine());
 
