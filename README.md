@@ -73,3 +73,7 @@ pgsql
 Примеры работы кода
 
 ![alt text](<Снимок экрана (70).png>) ![alt text](<Снимок экрана (71).png>) ![alt text](<Снимок экрана (66).png>) ![alt text](<Снимок экрана (67).png>) ![alt text](<Снимок экрана (68).png>) ![alt text](<Снимок экрана (69).png>)
+
+
+
+Presentation: https://www.canva.com/design/DAGk9JUy4ag/iYYpKZREVfH--WfHd8d6ig/edit?utm_content=DAGk9JUy4ag&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton
