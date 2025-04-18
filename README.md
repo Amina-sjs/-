@@ -1,34 +1,58 @@
-import service.HealthTrackerService;
+Курсовой проект: Health Parameter Tracker
+Описание проекта
+Health Parameter Tracker — это консольное приложение, разработанное на языке Java, предназначенное для отслеживания и анализа параметров здоровья пользователей. Пользователи могут регистрироваться в системе, вводить свои данные (вес, давление, упражнения и др.), устанавливать цели (например, похудеть), выбирать тренировочные планы, а также ежедневно отмечать выполнение тренировок. Система поддерживает ролевое разделение: обычные пользователи видят только свои записи, а администратор может просматривать и редактировать данные всех пользователей.
 
-import java.util.Scanner;
+Функциональные возможности
+Регистрация и авторизация
 
-public class Main {
-    public static void main(String[] args) {
-        HealthTrackerService service = new HealthTrackerService();
-        Scanner scanner = new Scanner(System.in);
-        int choice;
+Хранение логина и пароля пользователей.
 
-        do {
-            System.out.println("\n=== Health Parameter Tracker ===");
-            System.out.println("1. Add Record");
-            System.out.println("2. View Records");
-            System.out.println("3. Update Record");
-            System.out.println("4. Delete Record");
-            System.out.println("5. Export Data");
-            System.out.println("6. Exit");
-            System.out.print("Choose an option: ");
+Разделение на обычных пользователей и администратора.
 
-            choice = Integer.parseInt(scanner.nextLine());
+Работа с параметрами здоровья
 
-            switch (choice) {
-                case 1 -> service.addRecord(scanner);
-                case 2 -> service.viewRecords();
-                case 3 -> service.updateRecord(scanner);
-                case 4 -> service.deleteRecord(scanner);
-                case 5 -> service.exportData();
-                case 6 -> System.out.println("Goodbye!");
-                default -> System.out.println("Invalid option.");
-            }
-        } while (choice != 6);
-    }
-}
+Добавление записей (дата, вес, давление, физическая активность).
+
+Просмотр, обновление и удаление записей.
+
+Для обычных пользователей доступна только собственная история.
+
+Установка целей и тренировок
+
+Установка цели (например, похудение).
+
+Выбор тренировочного плана.
+
+Отметка выполнения тренировок по датам.
+
+Статистика
+
+Вывод средней массы тела, давления и количества тренировок.
+
+Умные уведомления (например, если вес резко изменился).
+
+Экспорт данных
+
+Экспорт данных пользователя в текстовый файл.
+
+Используемые технологии и библиотеки
+Язык программирования: Java 21
+
+СУБД: PostgreSQL 17
+
+Библиотека JDBC:
+Использован драйвер PostgreSQL JDBC:
+postgresql-42.7.5.jar, подключён через параметр -cp при компиляции.
+
+Средства сборки:
+Компиляция выполнялась вручную через javac, с организацией исходников по папкам:
+
+model — классы моделей (User, HealthRecord и т.д.)
+
+service — логика приложения (HealthTrackerService, UserService и др.)
+
+util — вспомогательные классы (например, DBManager.java)
+
+Формат хранения данных:
+Вся информация хранится в базе данных PostgreSQL, структура таблиц описана ниже.
+

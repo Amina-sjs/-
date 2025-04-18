@@ -1,29 +1,27 @@
 package service;
 
 import model.HealthRecord;
+import util.DBManager;
 import util.Validator;
 
-import java.io.*;
+import java.io.PrintWriter;
+import java.sql.*;
 import java.time.LocalDate;
 import java.util.*;
+import java.sql.Date;
+
 
 public class HealthTrackerService {
-    private final CSVHandler csvHandler = new CSVHandler();
-    private final List<HealthRecord> records;
     private final String currentUser;
     private String goal;
     private String selectedWorkout;
-    private final Map<String, Boolean> dailyWorkoutLog = new HashMap<>();
-    private final String GOAL_FILE = "data/goals.csv";
 
     public HealthTrackerService(String currentUser) {
         this.currentUser = currentUser;
-        this.records = csvHandler.loadRecords();
-        loadGoal(); 
+        loadGoal();
     }
 
     public void run(Scanner scanner) {
-        loadGoal(); 
         while (true) {
             System.out.println("\n=== Health Parameter Tracker ===");
             System.out.println("1. Add Record");
@@ -40,282 +38,340 @@ public class HealthTrackerService {
             String choice = scanner.nextLine();
 
             switch (choice) {
-                case "1": addRecord(scanner); break;
-                case "2": viewRecords(); break;
-                case "3": updateRecord(scanner); break;
-                case "4": deleteRecord(scanner); break;
-                case "5": exportData(); break;
-                case "6": setGoalAndSuggestWorkouts(scanner); break;
-                case "7": markWorkoutDone(scanner); break;
-                case "8": showStatistics(); break;
-                case "9":
+                case "1" -> addRecord(scanner);
+                case "2" -> viewRecords();
+                case "3" -> updateRecord(scanner);
+                case "4" -> deleteRecord(scanner);
+                case "5" -> exportData();
+                case "6" -> setGoalAndSuggestWorkouts(scanner);
+                case "7" -> markWorkoutDone(scanner);
+                case "8" -> showStatistics();
+                case "9" -> {
                     System.out.println("Logging out...");
                     return;
-                default:
-                    System.out.println("Invalid choice.");
+                }
+                default -> System.out.println("Invalid choice.");
             }
         }
     }
 
     public void addRecord(Scanner scanner) {
-        System.out.print("Enter date (YYYY-MM-DD): ");
-        String date = scanner.nextLine();
-        System.out.print("Enter weight (kg): ");
-        double weight = Double.parseDouble(scanner.nextLine());
-        System.out.print("Enter blood pressure (e.g., 120/80): ");
-        String bloodPressure = scanner.nextLine();
-        String[] bpParts = bloodPressure.split("/");
-        if (bpParts.length != 2) {
-            System.out.println("Invalid blood pressure format.");
-            return;
-        }
-        int sys, dia;
-        try {
-            sys = Integer.parseInt(bpParts[0]);
-            dia = Integer.parseInt(bpParts[1]);
-        } catch (NumberFormatException e) {
-            System.out.println("Blood pressure must be numbers like 120/80.");
-            return;
-        }
-        System.out.print("Enter exercise details: ");
-        String exercise = scanner.nextLine();
-        if (!Validator.isValidDate(date) || weight <= 0) {
-            System.out.println("Invalid input.");
-            return;
-        }
-        HealthRecord record = new HealthRecord(currentUser, date, weight, sys, dia, exercise);
-        records.add(record);
-        csvHandler.saveRecords(records);
-        System.out.println("Record added!");
-        logActivity(currentUser, "add_record");
+        try (Connection connection = DBManager.getConnection()) {
+            System.out.print("Enter date (YYYY-MM-DD): ");
+            String date = scanner.nextLine();
+            System.out.print("Enter weight (kg): ");
+            double weight = Double.parseDouble(scanner.nextLine());
+            System.out.print("Enter blood pressure (e.g., 120/80): ");
+            String bloodPressure = scanner.nextLine();
+            String[] bpParts = bloodPressure.split("/");
+            if (bpParts.length != 2) {
+                System.out.println("Invalid blood pressure format.");
+                return;
+            }
+             
+            System.out.print("Enter exercise details: ");
+            String exercise = scanner.nextLine();
 
+            if (!Validator.isValidDate(date) || weight <= 0) {
+                System.out.println("Invalid input.");
+                return;
+            }
+
+            String sql = "INSERT INTO health_records (user_id, date, weight, blood_pressure, exercise, goal) VALUES ((SELECT id FROM users WHERE name = ?), ?, ?, ?, ?, ?)";
+            try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+                stmt.setString(1, currentUser);
+                stmt.setString(2, currentUser);
+                stmt.setDate(3, Date.valueOf(date));
+                stmt.setDouble(4, weight);
+                stmt.setString(5, bloodPressure);
+                stmt.setString(6, exercise);
+                stmt.setString(7, goal); 
+                stmt.executeUpdate();
+                System.out.println("Record added!");
+                logActivity(currentUser, "add_record");
+            }
+        } catch (Exception e) {
+            System.out.println("Failed to add record: " + e.getMessage());
+        }
     }
 
     public void viewRecords() {
-        boolean isAdmin = currentUser.equals("admin");
-        List<HealthRecord> visibleRecords = new ArrayList<>();
-        for (HealthRecord r : records) {
-            if (isAdmin || r.getName().equals(currentUser)) {
-                visibleRecords.add(r);
+        String sql = currentUser.equals("admin") ?
+            "SELECT u.id, h.date, h.weight, h.blood_pressure, h.exercise, h.goal FROM health_records h JOIN users u ON h.username " +
+            "FROM health_records h " +
+            "JOIN users u ON h.user_id = u.id " +
+            "WHERE u.name = ?";
+            
+        try (Connection conn = DBManager.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            if (!currentUser.equals("admin")) {
+                stmt.setString(1, currentUser);
             }
-        }
-        if (visibleRecords.isEmpty()) {
-            System.out.println("No records found.");
-        } else {
-            visibleRecords.forEach(System.out::println);
+            ResultSet rs = stmt.executeQuery();
+            boolean found = false;
+            while (rs.next()) {
+                String userInfo = currentUser.equals("admin") ? ("User: " + rs.getString("name") + " | ") : "";
+                System.out.printf("ID: " + rs.getInt("id") +
+                               ", Date: " + rs.getDate("date") +
+                               ", Weight: " + rs.getDouble("weight") +
+                               ", Blood Pressure: " + rs.getString("blood_pressure") +
+                               ", Exercise: " + rs.getString("exercise"));
+
+            }
+            if (!found) System.out.println("No records found.");
+        } catch (SQLException e) {
+            System.out.println("Failed to retrieve records: " + e.getMessage());
         }
     }
 
     public void updateRecord(Scanner scanner) {
-        boolean isAdmin = currentUser.equals("admin");
-        List<HealthRecord> visibleRecords = new ArrayList<>();
-        for (HealthRecord r : records) {
-            if (isAdmin || r.getName().equals(currentUser)) {
-                visibleRecords.add(r);
-            }
-        }
-        if (visibleRecords.isEmpty()) {
-            System.out.println("No records found.");
-            return;
-        }
-        for (int i = 0; i < visibleRecords.size(); i++) {
-            System.out.println((i + 1) + ". " + visibleRecords.get(i));
-        }
-        System.out.print("Enter record number to update: ");
-        int index = Integer.parseInt(scanner.nextLine()) - 1;
-        if (index < 0 || index >= visibleRecords.size()) {
-            System.out.println("Invalid record.");
-            return;
-        }
-        HealthRecord toUpdate = visibleRecords.get(index);
-        records.remove(toUpdate);
-        addRecord(scanner);
-        csvHandler.saveRecords(records);
-        System.out.println("Record updated.");
-        logActivity(currentUser, "update_record");
+        try (Connection conn = DBManager.getConnection()) {
+            String selectSQL = "SELECT h.*, u.name FROM health_records h JOIN users u ON h.user_id = u.id" +
+                    (currentUser.equals("admin") ? "" : " WHERE u.name = ?");
+            List<HealthRecord> records = new ArrayList<>();
 
+            try (PreparedStatement stmt = conn.prepareStatement(selectSQL)) {
+                if (!currentUser.equals("admin")) {
+                    stmt.setString(1, currentUser);
+                }
+                ResultSet rs = stmt.executeQuery();
+                while (rs.next()) {
+                    records.add(new HealthRecord(
+                            rs.getString("name"),
+                            rs.getDate("date").toString(),
+                            rs.getDouble("weight"),
+                            rs.getInt("systolic"),
+                            rs.getInt("diastolic"),
+                            rs.getString("exercise")
+                    ));
+                }
+            }
+
+            if (records.isEmpty()) {
+                System.out.println("No records found.");
+                return;
+            }
+
+            for (int i = 0; i < records.size(); i++) {
+                System.out.println((i + 1) + ". " + records.get(i));
+            }
+
+            System.out.print("Choose record to update: ");
+            int choice = Integer.parseInt(scanner.nextLine()) - 1;
+            HealthRecord toUpdate = records.get(choice);
+
+            try (PreparedStatement deleteStmt = conn.prepareStatement(
+                    "DELETE FROM health_records WHERE user_id = (SELECT id FROM users WHERE name = ?) AND date = ?")) {
+                deleteStmt.setString(1, toUpdate.getName());
+                deleteStmt.setDate(2, Date.valueOf(toUpdate.getDate()));
+                deleteStmt.executeUpdate();
+            }
+
+            addRecord(scanner);
+            logActivity(currentUser, "update_record");
+
+        } catch (Exception e) {
+            System.out.println("Error: " + e.getMessage());
+        }
     }
 
     public void deleteRecord(Scanner scanner) {
-        System.out.print("Enter admin password to delete a record: ");
-        String password = scanner.nextLine();
-        if (!password.equals("admin123")) {
-            System.out.println("Access denied. Invalid password.");
+        if (!currentUser.equals("admin")) {
+            System.out.println("Only admin can delete records.");
             return;
         }
+
         viewRecords();
-        System.out.print("Enter record number to delete: ");
-        int index = Integer.parseInt(scanner.nextLine()) - 1;
-        if (index < 0 || index >= records.size()) {
-            System.out.println("Invalid record.");
-            return;
-        }
-        records.remove(index);
-        csvHandler.saveRecords(records);
-        System.out.println("Record deleted.");
-        System.out.println("Record deleted.");
+        System.out.print("Enter username: ");
+        String username = scanner.nextLine();
+        System.out.print("Enter date of record to delete (YYYY-MM-DD): ");
+        String date = scanner.nextLine();
 
-    }
-
-    public void showStatistics() {
-        List<HealthRecord> userRecords = new ArrayList<>();
-        for (HealthRecord r : records) {
-            if (r.getName().equals(currentUser)) {
-                userRecords.add(r);
+        try (Connection conn = DBManager.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(
+                     "DELETE FROM health_records WHERE user_id = (SELECT id FROM users WHERE name = ?) AND date = ?")) {
+            stmt.setString(1, username);
+            stmt.setDate(2, Date.valueOf(date));
+            int rows = stmt.executeUpdate();
+            if (rows > 0) {
+                System.out.println("Record deleted.");
+                logActivity(currentUser, "delete_record");
+            } else {
+                System.out.println("No record found.");
             }
+        } catch (Exception e) {
+            System.out.println("Error deleting record: " + e.getMessage());
         }
-
-        if (userRecords.isEmpty()) {
-            System.out.println("No records to analyze.");
-            return;
-        }
-
-        double totalWeight = 0;
-        int totalSys = 0;
-        int totalDia = 0;
-
-        for (HealthRecord r : userRecords) {
-            totalWeight += r.getWeight();
-            totalSys += r.getSystolic();
-            totalDia += r.getDiastolic();
-        }
-
-        double avgWeight = totalWeight / userRecords.size();
-        int avgSys = totalSys / userRecords.size();
-        int avgDia = totalDia / userRecords.size();
-
-        System.out.printf("Average Weight: %.2f kg\n", avgWeight);
-        System.out.printf("Average Blood Pressure: %d/%d\n", avgSys, avgDia);
-        System.out.println("Your goal: " + (goal != null ? goal : "Not set"));
-        System.out.println("Your selected workout: " + (selectedWorkout != null ? selectedWorkout : "Not chosen"));
     }
 
     public void exportData() {
-        List<HealthRecord> userRecords = new ArrayList<>();
-        for (HealthRecord r : records) {
-            if (r.getName().equals(currentUser)) {
-                userRecords.add(r);
+        String sql = "SELECT date, weight, systolic, diastolic, exercise FROM health_records WHERE user_id = (SELECT id FROM users WHERE name = ?)";
+        try (Connection conn = DBManager.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, currentUser);
+            ResultSet rs = stmt.executeQuery();
+            try (PrintWriter writer = new PrintWriter("export_" + currentUser + ".csv")) {
+                writer.println("Date,Weight,BP,Exercise");
+                while (rs.next()) {
+                    String line = rs.getDate("date") + "," +
+                            rs.getDouble("weight") + "," +
+                            rs.getString("blood_pressure") + "," +
+                            rs.getString("exercise");
+                    writer.println(line);
+                }
+                System.out.println("Data exported.");
+                logActivity(currentUser, "export_data");
             }
+        } catch (Exception e) {
+            System.out.println("Export failed: " + e.getMessage());
         }
-        csvHandler.exportCSV("data/export_" + currentUser + ".csv", userRecords);
-        logActivity(currentUser, "export_data");
+    }
 
+    public void showStatistics() {
+        String sql = "SELECT AVG(weight) as avg_weight, AVG(systolic) as avg_sys, AVG(diastolic) as avg_dia FROM health_records WHERE user_id = (SELECT id FROM users WHERE name = ?)";
+        try (Connection conn = DBManager.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, currentUser);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                System.out.printf("Average Weight: %.2f kg\n", rs.getDouble("avg_weight"));
+                System.out.printf("Average BP: %d/%d\n", rs.getInt("avg_sys"), rs.getInt("avg_dia"));
+            }
+        } catch (Exception e) {
+            System.out.println("Failed to show stats: " + e.getMessage());
+        }
+
+        System.out.println("Your goal: " + (goal != null ? goal : "Not set"));
+        System.out.println("Your workout: " + (selectedWorkout != null ? selectedWorkout : "Not set"));
     }
 
     public void setGoalAndSuggestWorkouts(Scanner scanner) {
-        System.out.print("Enter your goal (e.g., lose weight, gain muscle): ");
-        goal = scanner.nextLine();
-        System.out.println("Suggested workouts:");
-        if (goal.equalsIgnoreCase("lose weight")) {
-            System.out.println("- Cardio\n- Running\n- Jump Rope");
-        } else if (goal.equalsIgnoreCase("gain muscle")) {
-            System.out.println("- Weight Lifting\n- Resistance Bands\n- Push-Ups");
-        } else {
-            System.out.println("- Walking\n- Stretching");
-        }
-        System.out.print("Choose one workout from the list: ");
-        selectedWorkout = scanner.nextLine();
-        System.out.println("You chose: " + selectedWorkout + ". Good luck!");
-        saveGoal();
-        logActivity(currentUser, "set_goal");
+        try {
+            System.out.print("Enter your goal (e.g., lose weight): ");
+            String inputGoal = scanner.nextLine().trim();
+            if (inputGoal.isEmpty()) {
+                System.out.println("Goal cannot be empty.");
+                return;
+            }
 
+            System.out.print("Choose workout plan (e.g., running, yoga): ");
+            String workout = scanner.nextLine().trim();
+            if (workout.isEmpty()) {
+                System.out.println("Workout plan cannot be empty.");
+                return;
+            }
+
+            this.goal = inputGoal;
+            this.selectedWorkout = workout;
+            saveGoal();
+            System.out.println("Goal and workout plan saved successfully.");
+            logActivity(currentUser, "set_goal");
+        } catch (Exception e) {
+            System.out.println("Failed to set goal and workout: " + e.getMessage());
+        }
     }
 
     public void markWorkoutDone(Scanner scanner) {
         if (selectedWorkout == null || selectedWorkout.isEmpty()) {
-            System.out.println("You haven't set a goal or chosen a workout yet.");
+            System.out.println("Set goal and workout first.");
             return;
         }
 
         String today = LocalDate.now().toString();
-        String logKey = currentUser + "_" + today;
 
-        if (dailyWorkoutLog.getOrDefault(logKey, false)) {
-            System.out.println("You've already marked today's workout as done ");
+        if (isWorkoutAlreadyLogged(today)) {
+            System.out.println("Already marked as done today.");
             return;
         }
 
-        System.out.print("Did you complete your workout today (" + selectedWorkout + ")? (yes/no): ");
-        String answer = scanner.nextLine();
-        if (answer.equalsIgnoreCase("yes")) {
-            dailyWorkoutLog.put(logKey, true);
-            System.out.println("Great job! Workout marked as done for today.");
+        System.out.print("Did you complete " + selectedWorkout + " today? (yes/no): ");
+        if (scanner.nextLine().equalsIgnoreCase("yes")) {
+            saveWorkoutLog(today);
+            System.out.println("Great! Keep it up.");
             logActivity(currentUser, "workout_done");
-
         } else {
-            System.out.println("No worries, try again tomorrow!");
+            System.out.println("Try again tomorrow!");
+        }
+    }
+
+    private boolean isWorkoutAlreadyLogged(String date) {
+        try (Connection conn = DBManager.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(
+                     "SELECT 1 FROM workout_log WHERE username = ? AND log_date = ?")) {
+            stmt.setString(1, currentUser);
+            stmt.setDate(2, Date.valueOf(date));
+            ResultSet rs = stmt.executeQuery();
+            return rs.next();
+        } catch (Exception e) {
+            System.out.println("Failed to check workout log: " + e.getMessage());
+            return false;
+        }
+    }
+
+    private void saveWorkoutLog(String date) {
+        try (Connection conn = DBManager.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(
+                     "INSERT INTO workout_log (username, log_date, workout) VALUES (?, ?, ?)")) {
+            stmt.setString(1, currentUser);
+            stmt.setDate(2, Date.valueOf(date));
+            stmt.setString(3, selectedWorkout);
+            stmt.executeUpdate();
+        } catch (Exception e) {
+            System.out.println("Failed to save workout log: " + e.getMessage());
         }
     }
 
     private void saveGoal() {
-        try (PrintWriter writer = new PrintWriter(new FileWriter(GOAL_FILE, true))) {
-            writer.println(currentUser + "," + goal + "," + selectedWorkout);
-        } catch (IOException e) {
-            System.out.println("Failed to save goal.");
+        try (Connection conn = DBManager.getConnection()) {
+            
+            try (PreparedStatement del = conn.prepareStatement("DELETE FROM goals WHERE username = ?")) {
+                del.setString(1, currentUser);
+                del.executeUpdate();
+            }
+    
+            
+            try (PreparedStatement stmt = conn.prepareStatement(
+                    "INSERT INTO goals (username, goal, workout) VALUES (?, ?, ?)")) {
+                stmt.setString(1, currentUser);
+                stmt.setString(2, goal);
+                stmt.setString(3, selectedWorkout);
+                stmt.executeUpdate();
+            }
+        } catch (Exception e) {
+            System.out.println("Failed to save goal: " + e.getMessage());
         }
     }
+    public void generateReports() {
+        System.out.println("System-wide report (admin only). Not implemented yet.");
+    }
+    
 
     private void loadGoal() {
-        try (BufferedReader reader = new BufferedReader(new FileReader(GOAL_FILE))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                String[] parts = line.split(",");
-                if (parts.length == 3 && parts[0].equals(currentUser)) {
-                    goal = parts[1];
-                    selectedWorkout = parts[2];
-                }
+        try (Connection conn = DBManager.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(
+                     "SELECT goal, workout FROM goals WHERE username = ?")) {
+            stmt.setString(1, currentUser);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                goal = rs.getString("goal");
+                selectedWorkout = rs.getString("workout");
             }
-        } catch (IOException ignored) {
+        } catch (Exception e) {
+            System.out.println("Failed to load goal: " + e.getMessage());
         }
- 
-   }
-
-   public void generateReports() {
-    if (!currentUser.equals("admin")) {
-        System.out.println("Access denied.");
-        return;
     }
 
-    int userCount = 0;
-    Map<String, Integer> operationCount = new HashMap<>();
-
-    try (BufferedReader userReader = new BufferedReader(new FileReader("data/users.csv"))) {
-        while (userReader.readLine() != null) {
-            userCount++;
+    private void logActivity(String user, String action) {
+        String date = LocalDate.now().toString();
+        try (Connection conn = DBManager.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(
+                     "INSERT INTO activity_log (log_date, username, action) VALUES (?, ?, ?)")) {
+            stmt.setDate(1, Date.valueOf(date));
+            stmt.setString(2, user);
+            stmt.setString(3, action);
+            stmt.executeUpdate();
+        } catch (Exception e) {
+            System.out.println("Failed to log activity: " + e.getMessage());
         }
-    } catch (IOException e) {
-        System.out.println("Failed to read users.");
     }
-
-    try (BufferedReader logReader = new BufferedReader(new FileReader("data/activity_log.csv"))) {
-        String line;
-        logReader.readLine(); // пропустить заголовок
-        while ((line = logReader.readLine()) != null) {
-            String[] parts = line.split(",");
-            if (parts.length >= 3) {
-                String action = parts[2];
-                operationCount.put(action, operationCount.getOrDefault(action, 0) + 1);
-            }
-        }
-    } catch (IOException e) {
-        System.out.println("Failed to read activity log.");
-    }
-
-    System.out.println("=== System Report ===");
-    System.out.println("Total registered users: " + userCount);
-    System.out.println("Operation frequencies:");
-    for (String action : operationCount.keySet()) {
-        System.out.println("- " + action + ": " + operationCount.get(action));
-    }
-}
-private void logActivity(String user, String action) {
-    String date = LocalDate.now().toString();
-    try (PrintWriter writer = new PrintWriter(new FileWriter("data/activity_log.csv", true))) {
-        writer.println(date + "," + user + "," + action);
-    } catch (IOException e) {
-        System.out.println("Failed to write to activity log.");
-    }
-}
-
-
 }

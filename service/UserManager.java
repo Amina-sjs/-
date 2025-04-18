@@ -1,60 +1,88 @@
 package service;
 
-import java.io.*;
-import java.util.*;
-
 import util.ActivityLogger;
+import util.DatabaseUtil;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 public class UserManager {
-    private static final String USER_FILE = "data/users.csv";
-    private final Map<String, String> users = new HashMap<>();
-
-    public UserManager() {
-        loadUsers();
-    }
-
-    private void loadUsers() {
-        try (BufferedReader reader = new BufferedReader(new FileReader(USER_FILE))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                String[] parts = line.split(",");
-                if (parts.length == 2) {
-                    users.put(parts[0], parts[1]); // name -> password
-                }
-            }
-        } catch (IOException e) {
-            System.out.println("No users found. Starting fresh.");
-        }
-    }
 
     public boolean userExists(String name) {
-        return users.containsKey(name);
+        String sql = "SELECT 1 FROM users WHERE name = ?";
+
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, name);
+            ResultSet rs = stmt.executeQuery();
+            return rs.next();
+
+        } catch (SQLException e) {
+            System.out.println("Ошибка при проверке существования пользователя: " + e.getMessage());
+            return false;
+        }
     }
 
     public boolean authenticate(String name, String password) {
-        return users.containsKey(name) && users.get(name).equals(password);
-    }
-public boolean register(String name, String password) {
-    if (users.containsKey(name)) {
-        System.out.println("User already exists.");
-        return false;
-    }
-    users.put(name, password);
-    saveUsers();
+        String sql = "SELECT * FROM users WHERE name = ? AND password = ?";
 
-   
-    ActivityLogger.log(name, "register", "new user registered");
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-    return true;
-}
-    private void saveUsers() {
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(USER_FILE))) {
-            for (Map.Entry<String, String> entry : users.entrySet()) {
-                writer.write(entry.getKey() + "," + entry.getValue());
-                writer.newLine();
-            }
-        } catch (IOException e) {
-            System.out.println("Failed to save users.");
+            stmt.setString(1, name);
+            stmt.setString(2, password);
+            ResultSet rs = stmt.executeQuery();
+            return rs.next();
+
+        } catch (SQLException e) {
+            System.out.println("Ошибка при аутентификации: " + e.getMessage());
+            return false;
         }
+    }
+
+    public boolean register(String name, String password) {
+        if (userExists(name)) {
+            System.out.println("Пользователь уже существует.");
+            return false;
+        }
+
+        String sql = "INSERT INTO users (name, password, is_admin) VALUES (?, ?, false)";
+
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, name);
+            stmt.setString(2, password);
+            stmt.executeUpdate();
+
+            ActivityLogger.log(name, "register", "new user registered");
+            return true;
+
+        } catch (SQLException e) {
+            System.out.println("Ошибка при регистрации: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean isAdmin(String name) {
+        String sql = "SELECT is_admin FROM users WHERE name = ?";
+
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, name);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return rs.getBoolean("is_admin");
+            }
+
+        } catch (SQLException e) {
+            System.out.println("Ошибка при проверке администратора: " + e.getMessage());
+        }
+
+        return false;
     }
 }
